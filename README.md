@@ -18,7 +18,7 @@ pip install -q "numpy<2.0.0" "setuptools<70.0.0" wheel ninja scikit-learn pandas
 ### 3. Compile the FastMoE Engine 
 
 ```bash
-cd /content
+cd ..
 rm -rf fastmoe
 git clone https://github.com/laekov/fastmoe.git
 cd fastmoe
@@ -41,7 +41,7 @@ Cleans raw `.edf` files using Independent Component Analysis (ICA).
 ### Step 2: Multi-Modal Fusion
 
 ```bash
-cd /content/FlexMoE-modified
+cd ../FlexMoE-modified
 python preprocess.py
 
 ```
