@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from moe_module import FMoETransformerMLP # MUST BE IN THE FOLDER
+from moe_module import FMoETransformerMLP 
 
 class Attention(nn.Module):
     def __init__(self, dim, num_heads=8, qkv_bias=False, attn_drop=0., proj_drop=0.):
@@ -40,19 +40,16 @@ class TransformerEncoderLayer(nn.Module):
         self.dropout2 = nn.Dropout(dropout)
         self.attn = Attention(d_model, num_heads=num_head, attn_drop=dropout, proj_drop=dropout)
         self.mlp_sparse = mlp_sparse
-        self.expert_index = None
 
         if self.mlp_sparse:
             self.mlp = FMoETransformerMLP(num_expert=num_experts, n_router=num_routers, d_model=d_model, d_hidden=d_model * 2, activation=nn.GELU(), top_k=top_k, **kwargs)
         else:
-            # Replaced the custom MLP with standard PyTorch layers to save space
             self.mlp = nn.Sequential(
                 nn.Linear(d_model, d_model * 2), nn.GELU(), nn.Dropout(dropout),
                 nn.Linear(d_model * 2, d_model)
             )
 
     def forward(self, x):
-        # x is expected to be a list containing our tensor
         chunk_size = [item.shape[1] for item in x]
         x_cat = self.norm1(torch.cat(x, dim=1))
         
@@ -63,7 +60,9 @@ class TransformerEncoderLayer(nn.Module):
         
         for i in range(len(chunk_size)):
             if self.mlp_sparse:
-                x_split[i] = x_split[i] + self.dropout2(self.mlp(self.norm2(x_split[i]), self.expert_index))
+                # FIX: Pass a dummy zero tensor to bypass the legacy 'NoneType' bug in moe_module.py
+                dummy_idx = torch.zeros(x_split[i].shape[0], dtype=torch.int64, device=x_split[i].device)
+                x_split[i] = x_split[i] + self.dropout2(self.mlp(self.norm2(x_split[i]), dummy_idx))
             else:
                 x_split[i] = x_split[i] + self.dropout2(self.mlp(self.norm2(x_split[i])))
         return x_split
@@ -83,21 +82,20 @@ class NeuroFlexMoE(nn.Module):
             _sparse = not _sparse
             
         self.network = nn.ModuleList(layers)
-        self.decoder = nn.Linear(hidden_dim, 1) # REGRESSION HEAD FOR SUDS
+        self.decoder = nn.Linear(hidden_dim, 1) 
 
     def forward(self, x):
         x = self.input_fc(x) + self.pos_embed[:, :x.size(1), :]
-        x = [x] # Wrap in list to match FlexMoE chunk logic
+        x = [x] 
         
         for layer in self.network:
             x = layer(x)
             
-        x_out = x[0] # Unwrap from list
+        x_out = x[0] 
         out = self.decoder(x_out.mean(dim=1))
         return out.squeeze(-1)
 
     def gate_loss(self):
-        # Extract the routing loss from the moe_module to balance the experts
         g_loss = []
         for mn, mm in self.named_modules():
             if hasattr(mm, 'all_gates'):
