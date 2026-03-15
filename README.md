@@ -28,7 +28,7 @@ CUDA_HOME=/usr/local/cuda USE_NCCL=0 python setup.py install
 
 ---
 
-## 🚀 Execution Steps
+##  Execution
 
 ### Step 1: EEG Artifact Removal (MATLAB)
 
@@ -38,7 +38,7 @@ Cleans raw `.edf` files using Independent Component Analysis (ICA).
 * **Update Paths:** Open `clean_raw_eeg.m` and set `eegpath` (your local EEGLAB folder) and `rootDir` (your `raw_data` folder).
 * **Command:** click **Run**.
 
-### Step 2: Multi-Modal Fusion (Python)
+### Step 2: Multi-Modal Fusion
 
 ```bash
 cd /content/FlexMoE-modified
@@ -46,7 +46,7 @@ python preprocess.py
 
 ```
 
-### Step 3: Mixture-of-Experts Training (Python)
+### Step 3: Mixture-of-Experts Training
 
 ```bash
 python train.py
